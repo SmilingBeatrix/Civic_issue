@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 // ==========================================
 // Shared helpers
 // ==========================================
-const API_BASE = "http://localhost:5000";
+const API_BASE = "https://civic-issue-e82d.onrender.com";
 const normalizeEmail = (email?: string | null): string =>
   (email || "").trim().toLowerCase();
 

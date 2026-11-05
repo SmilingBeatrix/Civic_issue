@@ -22,7 +22,7 @@ export const TrackIssue: React.FC = () => {
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/complaints/${id.trim()}`,
+        `https://civic-issue-e82d.onrender.com/api/complaints/${id.trim()}`,
       );
       if (res.ok) {
         const data = await res.json();

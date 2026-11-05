@@ -27,7 +27,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const body = isLogin ? { email, password } : { name, email, password };
 
     try {
-      const res = await fetch(`http://localhost:5000${endpoint}`, {
+      const res = await fetch(`https://civic-issue-e82d.onrender.com${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

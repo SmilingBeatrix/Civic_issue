@@ -13,7 +13,9 @@ export const WorkerDashboard: React.FC = () => {
 
   const fetchComplaints = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/complaints");
+      const res = await fetch(
+        "https://civic-issue-e82d.onrender.com/api/complaints",
+      );
       const data = await res.json();
       setComplaints(data);
     } catch (err) {
@@ -28,7 +30,7 @@ export const WorkerDashboard: React.FC = () => {
   const handleStatusChange = async (complaintId: string, newStatus: string) => {
     try {
       const res = await fetch(
-        `http://localhost:5000/api/complaints/${complaintId}/status`,
+        `https://civic-issue-e82d.onrender.com/api/complaints/${complaintId}/status`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

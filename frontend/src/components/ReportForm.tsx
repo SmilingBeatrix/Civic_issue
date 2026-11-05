@@ -37,11 +37,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({ user, onOpenAuth }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("http://localhost:5000/api/complaints", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, category, description, imageUrl }),
-      });
+      const res = await fetch(
+        "https://civic-issue-e82d.onrender.com/api/complaints",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, category, description, imageUrl }),
+        },
+      );
       const data = await res.json();
       if (res.ok) {
         setSubmittedId(data.complaintId);
