@@ -1,20 +1,20 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 import { connectDB } from "./config/db.js";
+import { seedAdmin } from "./config/seedAdmin.js"; // ⬅️ NEW
 import complaintRoutes from "./routes/complaintRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
-import path from "path"
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-connectDB();
-
 const __dirname = path.resolve();
 
+// Middleware
 app.use(
   cors({
     origin: [
@@ -29,9 +29,11 @@ app.use(
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
+// API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/complaints", complaintRoutes);
 
+// Error handler
 interface CustomError extends Error {
   status?: number;
 }
@@ -45,11 +47,25 @@ app.use(
   },
 );
 
+// Serve frontend build (static files)
 app.use(express.static(path.join(__dirname, "/frontend/dist")));
 app.get("*", (req, res) => {
   res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// ⬇️ IMPORTANT: Server start karne ka sahi tareeka
+// Pehle DB connect, phir admin seed, phir listen
+const startServer = async () => {
+  try {
+    await connectDB(); // 1. DB connect
+    await seedAdmin(); // 2. Admin seed (agar already exists toh skip)
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("❌ Failed to start server:", error);
+    process.exit(1);
+  }
+};
+
+startServer();

@@ -94,6 +94,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const [targetRole, setTargetRole] = useState<"citizen" | "worker">(
     defaultRole,
   );
+  
   const [isLogin, setIsLogin] = useState<boolean>(true);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
