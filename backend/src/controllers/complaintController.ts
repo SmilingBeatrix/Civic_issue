@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import Complaint from "../models/Complaint";
+import Complaint from "../models/Complaint.js";
 
 // Generate short readable ID (e.g. CIVIC-123456)
 const generateComplaintId = () => {
