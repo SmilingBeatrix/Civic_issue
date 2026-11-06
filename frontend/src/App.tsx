@@ -277,6 +277,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
 // ==========================================
 // 4. Report Form (with post-submit → history hook)
 // ==========================================
+// Upgraded ReportForm Component
+// ==========================================
 interface ReportFormProps {
   user: User | null;
   onOpenAuth: (role: "citizen" | "worker") => void;
@@ -294,28 +296,108 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [category, setCategory] = useState("Roads");
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Handle image selection & local preview
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setImageFile(file);
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+    } else {
+      setImagePreview(null);
+    }
+  };
+
+  const handleClearImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // 3-Step Instruction Guide Banner
+  const renderHowToGuide = () => (
+    <div
+      style={{
+        background: "#f0f9ff",
+        border: "1px solid #bae6fd",
+        borderRadius: "10px",
+        padding: "16px 20px",
+        marginBottom: "22px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "14px",
+          fontWeight: 700,
+          color: "#0369a1",
+          marginBottom: "10px",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+        }}
+      >
+        <span>📢</span> Standard Grievance Filing Guidelines
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "12px",
+          fontSize: "13px",
+          color: "#0c4a6e",
+          lineHeight: "1.4",
+        }}
+      >
+        <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+          <span style={{ fontSize: "16px" }}>📸</span>
+          <div>
+            <strong>1. Capture Photo:</strong> Attach clear evidence of potholes, waterlogging, or public hazard.
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+          <span style={{ fontSize: "16px" }}>📍</span>
+          <div>
+            <strong>2. Specify Landmark:</strong> Note the street, nearby shop, crossroad, or ward details.
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+          <span style={{ fontSize: "16px" }}>⚡</span>
+          <div>
+            <strong>3. Track Status:</strong> You will receive a unique tracking ID instantly upon submission.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Locked Gatekeeper (If not logged in)
   if (!user) {
     return (
-      <div className="card locked-container">
-        <div className="locked-icon-wrapper">🔒</div>
-        <h2 className="card-title" style={{ fontSize: "24px" }}>
-          Citizen Authentication Required
-        </h2>
-        <p className="locked-desc">
-          Only registered citizens can lodge public grievances. Please sign in
-          or register to proceed.
-        </p>
-        <button
-          onClick={() => onOpenAuth("citizen")}
-          className="btn-primary"
-          style={{ padding: "12px 32px" }}
-        >
-          Citizen Sign In / Register
-        </button>
+      <div className="card">
+        {renderHowToGuide()}
+
+        <div className="locked-container" style={{ padding: "30px 16px" }}>
+          <div className="locked-icon-wrapper">🔒</div>
+          <h2 className="card-title" style={{ fontSize: "22px", marginTop: "12px" }}>
+            Citizen Authentication Required
+          </h2>
+          <p className="locked-desc" style={{ maxWidth: "480px", margin: "8px auto 20px" }}>
+            To ensure genuine reports and keep municipal records verifiable, citizens must sign in or register to lodge grievances.
+          </p>
+          <button
+            onClick={() => onOpenAuth("citizen")}
+            className="btn-primary"
+            style={{ padding: "12px 32px" }}
+          >
+            Citizen Sign In / Register
+          </button>
+        </div>
       </div>
     );
   }
@@ -328,6 +410,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
     }
     setIsSubmitting(true);
     setSubmittedId(null);
+    setCopied(false);
 
     try {
       const base64Image = await new Promise<string>((resolve, reject) => {
@@ -351,26 +434,40 @@ const ReportForm: React.FC<ReportFormProps> = ({
 
       const data = await res.json();
       if (res.ok) {
-        setSubmittedId(data.complaintId || data._id);
+        const newId = data.complaintId || data._id;
+        setSubmittedId(newId);
+
+        // Reset form inputs & preview
         setTitle("");
         setDescription("");
         setImageFile(null);
+        setImagePreview(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
-        onComplaintSubmitted(); // ⬅️ new: refresh My Reports immediately
+
+        // Trigger immediate parent refresh for "My Reports"
+        onComplaintSubmitted();
       } else {
         alert(data.error || "Failed to submit grievance.");
       }
-    } catch {
-      alert(
-        "Failed to submit grievance. Make sure backend is running on port 5000.",
-      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Service unreachable";
+      alert(`Submission error: ${msg}. Please check your connection.`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleCopyId = () => {
+    if (!submittedId) return;
+    navigator.clipboard.writeText(submittedId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
   return (
     <div className="card">
+      {renderHowToGuide()}
+
       <div className="card-header">
         <h2 className="card-title">File a Public Issue</h2>
         <span className="badge-user">
@@ -383,31 +480,45 @@ const ReportForm: React.FC<ReportFormProps> = ({
           className="alert-success"
           style={{ margin: "20px 0", padding: "16px", borderRadius: "8px" }}
         >
-          <div
-            style={{ fontSize: "16px", fontWeight: 700, marginBottom: "6px" }}
-          >
+          <div style={{ fontSize: "16px", fontWeight: 700, marginBottom: "6px" }}>
             🎉 Grievance Logged Successfully!
           </div>
-          <div>
-            Your Official Tracking ID is:{" "}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <span>Official Tracking ID:</span>
             <strong
               style={{
                 fontSize: "18px",
                 color: "#0369a1",
-                textDecoration: "underline",
+                letterSpacing: "0.5px",
               }}
             >
               {submittedId}
             </strong>
+            <button
+              type="button"
+              onClick={handleCopyId}
+              style={{
+                background: "#e0f2fe",
+                border: "1px solid #7dd3fc",
+                color: "#0369a1",
+                padding: "3px 10px",
+                borderRadius: "5px",
+                fontSize: "12px",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              {copied ? "✓ Copied!" : "📋 Copy ID"}
+            </button>
           </div>
           <p style={{ fontSize: "13px", marginTop: "6px", color: "#075985" }}>
-            This has been linked to your email (<strong>{user.email}</strong>).
+            This issue has been linked to your account (<strong>{user.email}</strong>).
           </p>
           <div
             style={{
               display: "flex",
               gap: "10px",
-              marginTop: "10px",
+              marginTop: "12px",
               flexWrap: "wrap",
             }}
           >
@@ -420,9 +531,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
             </button>
             <button
               onClick={() => {
-                /* triggers refresh via parent */ window.dispatchEvent(
-                  new Event("open-my-reports"),
-                );
+                window.dispatchEvent(new Event("open-my-reports"));
               }}
               className="btn-secondary"
               style={{ padding: "8px 18px", fontSize: "13px" }}
@@ -443,6 +552,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
             placeholder="e.g., Deep crater pothole near Main Square"
           />
         </div>
+
         <div className="form-group">
           <label>Category</label>
           <select
@@ -456,6 +566,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
             <option value="Other">Other Public Hazard</option>
           </select>
         </div>
+
         <div className="form-group">
           <label>Upload Evidence Photo</label>
           <input
@@ -463,9 +574,56 @@ const ReportForm: React.FC<ReportFormProps> = ({
             accept="image/*"
             required
             ref={fileInputRef}
-            onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+            onChange={handleImageChange}
           />
+          {imagePreview && (
+            <div
+              style={{
+                marginTop: "10px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "12px",
+                background: "#f8fafc",
+                padding: "8px 12px",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <img
+                src={imagePreview}
+                alt="Selected preview"
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  objectFit: "cover",
+                  borderRadius: "6px",
+                  border: "1px solid #cbd5e1",
+                }}
+              />
+              <div style={{ fontSize: "12px", color: "#475569" }}>
+                <span>{imageFile?.name}</span>
+                <div style={{ marginTop: "2px" }}>
+                  <button
+                    type="button"
+                    onClick={handleClearImage}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#ef4444",
+                      padding: 0,
+                      cursor: "pointer",
+                      fontSize: "12px",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Remove photo
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
         <div className="form-group">
           <label>Incident Details & Landmark</label>
           <textarea
@@ -476,6 +634,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
             placeholder="Describe the exact location, prominent landmarks, and hazards..."
           />
         </div>
+
         <button type="submit" className="submit-btn" disabled={isSubmitting}>
           {isSubmitting ? "Submitting Report..." : "Submit Incident Report"}
         </button>
@@ -483,7 +642,6 @@ const ReportForm: React.FC<ReportFormProps> = ({
     </div>
   );
 };
-
 // ==========================================
 // 5. Citizen's "My Reports" — fixed
 // ==========================================
